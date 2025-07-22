@@ -22,4 +22,375 @@
       --text-primary: #e2e8f0;
       --text-secondary: #94a3b8;
       --border-color: #475569;
-      --color-primary: #60a
+      --color-primary: #60a5fa;
+      --color-accent: #f87171;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+    .btn-primary {
+      background-color: var(--color-primary);
+      color: white;
+      font-weight: 600;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.75rem;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover:not(:disabled) { opacity: 0.9; }
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .input-field {
+      border: 1px solid var(--border-color);
+      padding: 0.75rem;
+      border-radius: 0.75rem;
+      width: 100%;
+      font-size: 1rem;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+    .hangman-part { opacity: 0; transition: opacity 0.3s ease-in-out; }
+    .loader { display: none; }
+    .theme-switcher {
+      appearance: none;
+      width: 52px;
+      height: 28px;
+      background-color: var(--bg-secondary);
+      border-radius: 999px;
+      position: relative;
+      cursor: pointer;
+    }
+    .theme-switcher::before {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 24px;
+      height: 24px;
+      background-color: white;
+      border-radius: 50%;
+      transition: transform 0.3s ease;
+    }
+    .dark .theme-switcher::before { transform: translateX(24px); }
+    .sun-icon, .moon-icon { pointer-events: none; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4 bg-primary text-primary transition-colors duration-300">
+
+  <!-- Header -->
+  <header class="w-full max-w-3xl mx-auto flex justify-between items-center mb-6">
+    <h1 id="main-title" class="text-3xl font-bold">Ahorcado: Big Data</h1>
+    <div class="flex items-center space-x-3">
+      <button id="lang-toggle-btn" class="font-bold text-sm text-secondary border border-custom rounded-2xl px-3 py-1">ES / CA</button>
+      <label class="inline-flex items-center cursor-pointer">
+        <input type="checkbox" id="theme-switcher" class="sr-only">
+        <span class="sun-icon text-yellow-500 mr-1">☀️</span>
+        <span class="moon-icon text-gray-700 ml-1 hidden">🌙</span>
+      </label>
+    </div>
+  </header>
+
+  <!-- Sección de Configuración -->
+  <div id="generation-section" class="w-full max-w-3xl mx-auto bg-bg-secondary p-6 rounded-2xl shadow-md border border-border-color space-y-5">
+    <h2 id="challenge-title" class="text-xl font-bold">¡Descubre la palabra clave de Big Data!</h2>
+    
+    <p id="instruction-text" class="text-secondary">Elige un nivel de dificultad:</p>
+    
+    <div class="space-y-3">
+      <label class="block">
+        <input type="radio" name="difficulty" value="easy" checked> 
+        Fácil (palabras comunes)
+      </label>
+      <label class="block">
+        <input type="radio" name="difficulty" value="medium"> 
+        Medio (términos técnicos)
+      </label>
+      <label class="block">
+        <input type="radio" name="difficulty" value="hard"> 
+        Difícil (tecnologías avanzadas)
+      </label>
+    </div>
+
+    <button id="generate-button" class="btn-primary w-full py-3">Comenzar Juego</button>
+  </div>
+
+  <!-- Cargando (oculto) -->
+  <div id="loader" class="hidden flex items-center justify-center py-3">
+    <div class="loader border-4 border-border-color border-l-color-primary rounded-full w-10 h-10 animate-spin"></div>
+    <span class="ml-3" id="generating-message">Buscando palabra...</span>
+  </div>
+
+  <!-- Sección del Juego -->
+  <div id="game-section" class="hidden w-full max-w-3xl mx-auto bg-bg-secondary p-6 rounded-2xl shadow-lg space-y-6">
+
+    <!-- Palabra Oculta -->
+    <div id="word-display" class="flex justify-center gap-2 mt-4"></div>
+
+    <!-- Estado del Juego -->
+    <p id="game-status" class="text-center font-bold mt-4"></p>
+
+    <!-- Ahorcado SVG -->
+    <div class="flex justify-center">
+      <svg width="200" height="200" viewBox="0 0 200 200" class="border border-border-color rounded-lg p-2">
+        <!-- Poste -->
+        <line x1="40" y1="180" x2="100" y2="180" stroke="currentColor" stroke-width="4"/>
+        <line x1="70" y1="180" x2="70" y2="40" stroke="currentColor" stroke-width="4"/>
+        <line x1="70" y1="40" x2="120" y2="40" stroke="currentColor" stroke-width="4"/>
+        <line x1="120" y1="40" x2="120" y2="60" stroke="currentColor" stroke-width="4"/>
+        
+        <!-- Cabeza -->
+        <circle cx="120" cy="70" r="10" fill="none" stroke="currentColor" stroke-width="3" class="hangman-part" id="head"/>
+        
+        <!-- Cuerpo -->
+        <line x1="120" y1="80" x2="120" y2="120" stroke="currentColor" stroke-width="3" class="hangman-part" id="body"/>
+        
+        <!-- Brazos -->
+        <line x1="120" y1="90" x2="100" y2="100" stroke="currentColor" stroke-width="3" class="hangman-part" id="left-arm"/>
+        <line x1="120" y1="90" x2="140" y2="100" stroke="currentColor" stroke-width="3" class="hangman-part" id="right-arm"/>
+        
+        <!-- Piernas -->
+        <line x1="120" y1="120" x2="100" y2="140" stroke="currentColor" stroke-width="3" class="hangman-part" id="left-leg"/>
+        <line x1="120" y1="120" x2="140" y2="140" stroke="currentColor" stroke-width="3" class="hangman-part" id="right-leg"/>
+      </svg>
+    </div>
+
+    <!-- Teclado -->
+    <div id="keyboard-container" class="flex flex-wrap justify-center gap-2 mt-4"></div>
+
+    <!-- Botón Reiniciar -->
+    <div class="text-center">
+      <button id="reset-button" class="btn-primary px-6 py-2">Volver a jugar</button>
+    </div>
+  </div>
+
+  <script>
+    // --- PALABRAS DE BIG DATA POR NIVEL ---
+    const wordBank = {
+      easy: ['DATO', 'BASE', 'RED', 'NUBE', 'FLUJO'],
+      medium: ['HADOOP', 'SPARK', 'KAFKA', 'NOSQL', 'CLUSTER', 'ETL', 'API', 'JSON'],
+      hard: ['DATABRICKS', 'SCALABILITY', 'STREAMING', 'MICROBATCH', 'PARQUET', 'ZEPPELIN']
+    };
+
+    // --- ELEMENTOS DEL DOM ---
+    const dom = {
+      mainTitle: document.getElementById('main-title'),
+      challengeTitle: document.getElementById('challenge-title'),
+      instructionText: document.getElementById('instruction-text'),
+      generateButton: document.getElementById('generate-button'),
+      loader: document.getElementById('loader'),
+      errorMessage: document.getElementById('error-message'),
+      gameSection: document.getElementById('game-section'),
+      generationSection: document.getElementById('generation-section'),
+      wordDisplay: document.getElementById('word-display'),
+      gameStatus: document.getElementById('game-status'),
+      keyboardContainer: document.getElementById('keyboard-container'),
+      resetButton: document.getElementById('reset-button'),
+      themeSwitcher: document.getElementById('theme-switcher'),
+      sunIcon: document.querySelector('.sun-icon'),
+      moonIcon: document.querySelector('.moon-icon'),
+      langToggleButton: document.getElementById('lang-toggle-btn')
+    };
+
+    // --- TRADUCCIONES ---
+    const translations = {
+      es: {
+        mainTitle: 'Ahorcado: Big Data',
+        challengeTitle: '¡Descubre la palabra clave de Big Data!',
+        instructionText: 'Elige un nivel de dificultad:',
+        generateButton: 'Comenzar Juego',
+        errorsLabel: 'Errores',
+        winMessage: '🎉 ¡Correcto! La palabra era:',
+        loseMessage: '💀 ¡Has perdido! La palabra era:',
+        difficultyEasy: 'Fácil',
+        difficultyMedium: 'Medio',
+        difficultyHard: 'Difícil',
+        langToggle: 'ES / CA'
+      },
+      ca: {
+        mainTitle: 'Penjat: Big Data',
+        challengeTitle: 'Endevina la paraula clau de Big Data!',
+        instructionText: 'Tria un nivell de dificultat:',
+        generateButton: 'Començar joc',
+        errorsLabel: 'Errors',
+        winMessage: '🎉 ¡Correcte! La paraula era:',
+        loseMessage: '💀 Has perdut! La paraula era:',
+        difficultyEasy: 'Fàcil',
+        difficultyMedium: 'Mitjà',
+        difficultyHard: 'Difícil',
+        langToggle: 'ES / CA'
+      }
+    };
+
+    let currentLang = 'es';
+    let selectedWord = '';
+    let guessedLetters = new Set();
+    let gameOver = false;
+    const MAX_MISTAKES = 6;
+
+    // --- CAMBIAR IDIOMA ---
+    const setLanguage = (lang) => {
+      currentLang = lang;
+      localStorage.setItem('uiLang', lang);
+      const t = translations[lang];
+      dom.mainTitle.textContent = t.mainTitle;
+      dom.challengeTitle.textContent = t.challengeTitle;
+      dom.instructionText.textContent = t.instructionText;
+      dom.generateButton.textContent = t.generateButton;
+      document.querySelectorAll('label input[value="easy"]')[0].nextSibling.textContent = ` ${t.difficultyEasy}`;
+      document.querySelectorAll('label input[value="medium"]')[0].nextSibling.textContent = ` ${t.difficultyMedium}`;
+      document.querySelectorAll('label input[value="hard"]')[0].nextSibling.textContent = ` ${t.difficultyHard}`;
+      dom.langToggleButton.textContent = t.langToggle;
+    };
+
+    dom.langToggleButton.addEventListener('click', () => {
+      const newLang = currentLang === 'es' ? 'ca' : 'es';
+      setLanguage(newLang);
+    });
+
+    // --- MODO OSCURO ---
+    const applyTheme = (isDark) => {
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        dom.sunIcon.classList.add('hidden');
+        dom.moonIcon.classList.remove('hidden');
+      } else {
+        document.documentElement.classList.remove('dark');
+        dom.sunIcon.classList.remove('hidden');
+        dom.moonIcon.classList.add('hidden');
+      }
+    };
+
+    const savedTheme = localStorage.getItem('theme');
+    applyTheme(savedTheme === 'dark');
+
+    dom.themeSwitcher.addEventListener('change', () => {
+      const isDark = dom.themeSwitcher.checked;
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      applyTheme(isDark);
+    });
+
+    // --- SELECCIONAR PALABRA ---
+    function selectWord(difficulty) {
+      const words = wordBank[difficulty];
+      return words[Math.floor(Math.random() * words.length)];
+    }
+
+    // --- INICIAR JUEGO ---
+    dom.generateButton.addEventListener('click', () => {
+      const difficulty = document.querySelector('input[name="difficulty"]:checked').value;
+      selectedWord = selectWord(difficulty);
+      guessedLetters.clear();
+      gameOver = false;
+      dom.generationSection.classList.add('hidden');
+      dom.gameSection.classList.remove('hidden');
+      initGame();
+    });
+
+    function initGame() {
+      renderWord();
+      updateStatus();
+      createKeyboard();
+      showHangmanParts(0); // Resetear ahorcado
+    }
+
+    function renderWord() {
+      dom.wordDisplay.innerHTML = selectedWord
+        .split('')
+        .map(letter => `
+          <span class="w-8 h-12 md:w-10 md:h-14 flex items-center justify-center border-b-4 border-custom font-bold">
+            ${guessedLetters.has(letter) ? letter : ''}
+          </span>
+        `)
+        .join('');
+    }
+
+    function updateStatus() {
+      const mistakes = getMistakes();
+      dom.gameStatus.textContent = `${translations[currentLang].errorsLabel}: ${mistakes}/${MAX_MISTAKES}`;
+      dom.gameStatus.style.color = 'var(--text-primary)';
+    }
+
+    function getMistakes() {
+      return [...guessedLetters].filter(letter => !selectedWord.includes(letter)).length;
+    }
+
+    function showHangmanParts(mistakes) {
+      const parts = ['head', 'body', 'left-arm', 'right-arm', 'left-leg', 'right-leg'];
+      parts.forEach((part, i) => {
+        const el = document.getElementById(part);
+        el.style.opacity = i < mistakes ? '1' : '0';
+      });
+    }
+
+    function createKeyboard() {
+      dom.keyboardContainer.innerHTML = '';
+      const alphabet = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split('');
+      alphabet.forEach(letter => {
+        const button = document.createElement('button');
+        button.textContent = letter;
+        button.classList.add('p-2', 'font-bold', 'rounded-xl', 'btn-keyboard', 'text-sm', 'sm:text-base');
+        button.dataset.letter = letter;
+        button.addEventListener('click', () => handleGuess(letter));
+        dom.keyboardContainer.appendChild(button);
+      });
+    }
+
+    function handleGuess(letter) {
+      if (gameOver || guessedLetters.has(letter)) return;
+      guessedLetters.add(letter);
+      const button = dom.keyboardContainer.querySelector(`[data-letter="${letter}"]`);
+      if (button) button.disabled = true;
+
+      if (selectedWord.includes(letter)) {
+        renderWord();
+      }
+
+      const mistakes = getMistakes();
+      updateStatus();
+      showHangmanParts(mistakes);
+
+      checkGameEnd(mistakes);
+    }
+
+    function checkGameEnd(mistakes) {
+      const correct = selectedWord.split('').every(l => guessedLetters.has(l));
+
+      if (correct) {
+        dom.gameStatus.textContent = `${translations[currentLang].winMessage} ${selectedWord}`;
+        dom.gameStatus.style.color = '#10b981';
+        endGame();
+      } else if (mistakes >= MAX_MISTAKES) {
+        dom.gameStatus.textContent = `${translations[currentLang].loseMessage} ${selectedWord}`;
+        dom.gameStatus.style.color = '#ef4444';
+        renderWord(); // Mostrar toda la palabra
+        endGame();
+      }
+    }
+
+    function endGame() {
+      gameOver = true;
+      dom.keyboardContainer.querySelectorAll('button').forEach(btn => btn.disabled = true);
+      dom.resetButton.classList.remove('hidden');
+    }
+
+    // --- REINICIAR JUEGO ---
+    dom.resetButton.addEventListener('click', () => {
+      dom.gameSection.classList.add('hidden');
+      dom.generationSection.classList.remove('hidden');
+    });
+
+    // --- INICIALIZACIÓN ---
+    const savedLang = localStorage.getItem('uiLang') || 'es';
+    setLanguage(savedLang);
+  </script>
+</body>
+</html>
