@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Desafío Big Data con IA</title>
+  <script src="https://cdn.tailwindcss.com "></script>
+  <style>
+    :root {
+      --color-primary: #4f46e5;
+      --bg-primary: #f9fafb;
+      --bg-secondary: #e5e7eb;
+      --text-primary: #111827;
+      --text-secondary: #4b5563;
+      --border-color: #d1d5db;
+    }
+    .dark {
+      --color-primary: #818cf8;
+      --bg-primary: #1f2937;
+      --bg-secondary: #374151;
+      --text-primary: #f9fafb;
+      --text-secondary: #d1d5db;
+      --border-color: #4b5563;
+    }
+    body {
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      transition: background-color 0.3s ease;
+    }
+    .input-field, .btn-primary, .theme-switcher {
+      transition: all 0.3s ease;
+    }
+    .btn-primary {
+      background-color: var(--color-primary);
+      color: white;
+      font-weight: bold;
+    }
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body class="font-sans leading-relaxed">
+
+  <div class="container mx-auto px-4 py-8 max-w-3xl">
+
+    <!-- Título -->
+    <h1 id="main-title" class="text-3xl font-extrabold text-center mb-2 text-primary">Desafío Big Data + IA</h1>
+    <p class="text-center text-secondary mb-6">Genera retos prácticos usando Inteligencia Artificial</p>
+
+    <!-- Selector de Idioma UI -->
+    <div class="flex justify-end mb-4">
+      <button id="lang-toggle-btn" class="text-sm underline">Cambiar a Català</button>
+    </div>
+
+    <!-- Formulario -->
+    <div class="bg-bg-secondary p-6 rounded-2xl shadow-md border border-border-color space-y-5">
+
+      <h2 id="challenge-title" class="text-xl font-bold mb-4 text-primary">Crea tu reto de Big Data</h2>
+
+      <div>
+        <label for="audience-input" class="block text-sm font-medium mb-1 text-secondary">Nivel del estudiante</label>
+        <input type="text" id="audience-input" class="w-full p-3 input-field rounded-lg"
+               placeholder="Ej: Estudiantes universitarios, Profesionales en transición">
+      </div>
+
+      <div>
+        <label for="theme-input" class="block text-sm font-medium mb-1 text-secondary">Tema Específico</label>
+        <input type="text" id="theme-input" class="w-full p-3 input-field rounded-lg"
+               placeholder="Ej: Procesamiento en tiempo real, Hadoop, Spark, Almacenamiento de datos">
+      </div>
+
+      <div>
+        <label for="tool-lang-input" class="block text-sm font-medium mb-1 text-secondary">Herramienta o Lenguaje</label>
+        <select id="tool-lang-input" class="w-full p-3 input-field rounded-lg">
+          <option value="Python">Python (PySpark, Pandas)</option>
+          <option value="SQL">SQL Avanzado</option>
+          <option value="Apache Spark">Apache Spark</option>
+          <option value="Kafka">Apache Kafka</option>
+          <option value="Hadoop">Hadoop (HDFS, MapReduce)</option>
+          <option value="NoSQL">Bases NoSQL (MongoDB, Cassandra)</option>
+        </select>
+      </div>
+
+      <button id="generate-button" class="w-full py-3 btn-primary rounded-2xl text-lg">Generar Reto con Gemini</button>
+
+      <div id="loader" class="hidden flex items-center justify-center py-3">
+        <svg class="animate-spin h-6 w-6 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"></circle>
+          <path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" fill="currentColor" class="opacity-75"></path>
+        </svg>
+        <span class="ml-2" id="generating-message">Generando tu reto con IA...</span>
+      </div>
+
+      <p id="error-message" class="text-red-600 text-sm hidden"></p>
+    </div>
+
+    <!-- Resultado -->
+    <div id="result-container" class="mt-8 p-6 bg-bg-secondary rounded-2xl shadow-inner hidden">
+      <h3 class="font-bold text-primary mb-3">🚀 Tu Desafío de Big Data:</h3>
+      <p id="generated-challenge" class="whitespace-pre-line text-secondary leading-relaxed"></p>
+    </div>
+
+    <!-- Botón Oscuro -->
+    <div class="flex justify-end mt-6">
+      <label class="inline-flex items-center cursor-pointer">
+        <input type="checkbox" id="theme-switcher" class="sr-only">
+        <span class="sun-icon text-yellow-500 mr-1">☀️</span>
+        <span class="moon-icon text-gray-700 ml-1 hidden">🌙</span>
+      </label>
+    </div>
+
+  </div>
+
+  <script>
+    // --- ELEMENTOS DEL DOM ---
+    const dom = {
+      mainTitle: document.getElementById('main-title'),
+      challengeTitle: document.getElementById('challenge-title'),
+      audienceLabel: document.getElementById('audience-label'),
+      themeLabel: document.getElementById('theme-label'),
+      toolLangLabel: document.getElementById('tool-lang-label'),
+      generateButton: document.getElementById('generate-button'),
+      loader: document.getElementById('loader'),
+      errorMessage: document.getElementById('error-message'),
+      resultContainer: document.getElementById('result-container'),
+      generatedChallenge: document.getElementById('generated-challenge'),
+      themeSwitcher: document.getElementById('theme-switcher'),
+      sunIcon: document.querySelector('.sun-icon'),
+      moonIcon: document.querySelector('.moon-icon'),
+      langToggleButton: document.getElementById('lang-toggle-btn'),
+      audienceInput: document.getElementById('audience-input'),
+      themeInput: document.getElementById('theme-input'),
+      toolLangInput: document.getElementById('tool-lang-input'),
+      generatingMessage: document.getElementById('generating-message')
+    };
+
+    // --- TRADUCCIONES ---
+    const translations = {
+      es: {
+        mainTitle: 'Desafío Big Data + IA',
+        challengeTitle: 'Crea tu reto de Big Data',
+        audienceLabel: 'Nivel del estudiante',
+        audiencePlaceholder: 'Ej: Universitario, Profesional, Bootcamp',
+        themeLabel: 'Tema Específico',
+        themePlaceholder: 'Ej: Procesamiento en tiempo real, Hadoop, Spark',
+        toolLangLabel: 'Herramienta o Lenguaje',
+        generateButton: 'Generar Reto con Gemini',
+        generatingMessage: 'Generando tu reto con IA...',
+        errorApi: 'No se pudo generar el reto. Revisa tu conexión o clave API.',
+        winMessage: 'Reto generado con éxito. ¡A aprender!',
+        langToggle: 'Cambiar a Català'
+      },
+      ca: {
+        mainTitle: 'Repte Big Data + IA',
+        challengeTitle: 'Crea el teu repte de Big Data',
+        audienceLabel: 'Nivell de l\'estudiant',
+        audiencePlaceholder: 'Ex: Universitari, Professional, Bootcamp',
+        themeLabel: 'Tema específic',
+        themePlaceholder: 'Ex: Processament en temps real, Hadoop, Spark',
+        toolLangLabel: 'Eina o Llenguatge',
+        generateButton: 'Generar repte amb Gemini',
+        generatingMessage: 'Generant repte amb IA...',
+        errorApi: 'No s\'ha pogut generar el repte. Revisa la connexió o clau API.',
+        winMessage: 'Repte generat amb èxit. Endavant!',
+        langToggle: 'Canviar a Español'
+      }
+    };
+
+    let currentLang = 'es';
+
+    // Cambiar idioma
+    const setLanguage = (lang) => {
+      currentLang = lang;
+      localStorage.setItem('uiLang', lang);
+      const t = translations[lang];
+      dom.mainTitle.textContent = t.mainTitle;
+      dom.challengeTitle.textContent = t.challengeTitle;
+      dom.audienceLabel.textContent = t.audienceLabel;
+      dom.themeLabel.textContent = t.themeLabel;
+      dom.generateButton.textContent = t.generateButton;
+      dom.generatingMessage.textContent = t.generatingMessage;
+      dom.errorMessage.textContent = t.errorApi;
+      dom.langToggleButton.textContent = t.langToggle;
+      if (dom.audienceInput?.placeholder) dom.audienceInput.placeholder = t.audiencePlaceholder;
+      if (dom.themeInput?.placeholder) dom.themeInput.placeholder = t.themePlaceholder;
+    };
+
+    dom.langToggleButton.addEventListener('click', () => {
+      const newLang = currentLang === 'es' ? 'ca' : 'es';
+      setLanguage(newLang);
+    });
+
+    // Cargar idioma guardado
+    const savedLang = localStorage.getItem('uiLang');
+    if (savedLang && translations[savedLang]) setLanguage(savedLang);
+
+    // Cambiar tema (claro/oscuro)
+    const applyTheme = (isDark) => {
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        dom.sunIcon.classList.add('hidden');
+        dom.moonIcon.classList.remove('hidden');
+      } else {
+        document.documentElement.classList.remove('dark');
+        dom.sunIntel.classList.remove('hidden');
+        dom.moonIcon.classList.add('hidden');
+      }
+    };
+
+    const savedTheme = localStorage.getItem('theme');
+    applyTheme(savedTheme === 'dark');
+    dom.themeSwitcher.addEventListener('change', () => {
+      const isDark = dom.themeSwitcher.checked;
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      applyTheme(isDark);
+    });
+
+    // Generar reto con Gemini
+    dom.generateButton.addEventListener('click', async () => {
+      const audience = dom.audienceInput.value.trim();
+      const theme = dom.themeInput.value.trim();
+      const tool = dom.toolLangInput.value;
+
+      if (!audience || !theme) {
+        showError('Por favor, completa todos los campos.');
+        return;
+      }
+
+      showLoading(true);
+
+      try {
+        const prompt = `Actúa como un profesor experto en Big Data. Diseña un desafío práctico para estudiantes de nivel "${audience}", sobre el tema "${theme}", utilizando la herramienta "${tool}". El reto debe incluir:
+        - Un objetivo claro de aprendizaje.
+        - Una tarea específica (ejecutable, no teórica).
+        - Recursos mínimos necesarios (dataset, herramientas).
+        - Duración estimada.
+        - Pregunta reflexiva final.
+        Responde únicamente con el reto, sin introducciones ni despedidas.`;
+
+        const apiKey = "TU_CLAVE_API_GEMINI"; // ⚠️ Cámbiala por tu clave real
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro :generateContent?key=${apiKey}`;
+
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: prompt }] }]
+          })
+        });
+
+        if (!response.ok) throw new Error("Error en la API");
+
+        const data = await response.json();
+        const challenge = data?.candidates?.[0]?.content?.parts?.[0]?.text || "No se pudo generar el reto.";
+
+        dom.generatedChallenge.textContent = challenge;
+        dom.resultContainer.classList.remove('hidden');
+        alert(translations[currentLang].winMessage);
+      } catch (error) {
+        console.error(error);
+        showError(translations[currentLang].errorApi);
+      } finally {
+        showLoading(false);
+      }
+    });
+
+    function showLoading(loading) {
+      dom.loader.classList.toggle('hidden', !loading);
+      dom.generateButton.disabled = loading;
+    }
+
+    function showError(msg) {
+      dom.errorMessage.textContent = msg;
+      dom.errorMessage.classList.remove('hidden');
+      setTimeout(() => dom.errorMessage.classList.add('hidden'), 5000);
+    }
+  </script>
+</body>
+</html>
